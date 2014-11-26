@@ -91,6 +91,19 @@ hget() {
 }
 #HashMap-hack END
 
+countDirectories () {
+	
+	subdircount=`find ./ -maxdepth 1 -type d | wc -l`
+
+}
+
+countJavaFiles(){
+
+	subjavacount=`ls -1 *.java | wc -l` 2>/dev/null
+
+}
+
+
 checkDownloads(){
 
 	for filename in ${DOWNLOAD_WHEN_FOUND[@]}
@@ -110,20 +123,6 @@ checkDownloads(){
 	done
 
 }
-
-countDirectories () {
-	
-	subdircount=`find ./ -maxdepth 1 -type d | wc -l`
-
-}
-
-countJavaFiles(){
-
-	subjavacount=`ls -1 *.java | wc -l` 2>/dev/null
-
-}
-
-
 
 checkNameArrayAndRun(){
 if [[ $1 == *Icon* ]]; then # AFLEVERINGSSPECIFIK. BØR NOK FJERNES
@@ -219,6 +218,19 @@ fi
 
 }
 
+removeSpecialCharacters() {
+
+for file in *.java 
+do
+
+	#removes non UTF 8 caracters
+	#echo $file
+	iconv -f utf-8 -t ascii -c $file > temp.java && mv temp.java $file
+
+done
+
+
+}
 
 #Takes a java file and the name of another java file. Runs the java file if they are NOT the same
 check() {
@@ -290,22 +302,6 @@ run(){
 removeSpecialCharacters
 
 gudmund
-
-}
-
-
-
-removeSpecialCharacters() {
-
-for file in *.java 
-do
-
-	#removes non UTF 8 caracters
-	#echo $file
-	iconv -f utf-8 -t ascii -c $file > temp.java && mv temp.java $file
-
-done
-
 
 }
 
