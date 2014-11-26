@@ -18,16 +18,19 @@ do
 			perl -pi -e "s/EDITOR=\".*\"/EDITOR=\"\"/g" $script
 			;;
 		--nottorun)
-			perl -pi -e "s/SHOULDNOTBERUN=(.*)/SHOULDNOTBERUN=()/g" $script
+			perl -pi -e "s/SHOULDNOTBERUN=\(.*\)/SHOULDNOTBERUN=\(\)/g" $script
 			;;
 		--downloadwhen)
-			perl -pi -e "s/DOWNLOAD_WHEN_FOUND=(.*)/DOWNLOAD_WHEN_FOUND=()/g" $script
+			perl -pi -e "s/DOWNLOAD_WHEN_FOUND=\(.*\)/DOWNLOAD_WHEN_FOUND=\(\)/g" $script
 			;;
 	esac
 done
 
 while test $# -gt 0 ;
 do
+	echo "$1"
+
+
 	case "$1" in
 		--help)
 			echo "Usage: $0 [--editor <EDITOR>] [--nottorun <FILENAME> [<FILENAME [<FILENAME> [...]]]]* [--downloadwhen <FILENAME> <URL>]*"
@@ -52,9 +55,11 @@ do
 				then
 					#nottorunArray="$nottorunArray $1"
 
-					perl -pi -e "s/SHOULDNOTBERUN=(/SHOULDNOTBERUN=($1 /g" $script
+					perl -pi -e "s/SHOULDNOTBERUN=\(/SHOULDNOTBERUN=\($1 /g" $script
 
 					shift
+				else
+					break
 				fi
 			done
 
@@ -69,9 +74,12 @@ do
 			do
 				if [[ ${1:0:1} != "-" ]];
 				then
-					perl -pi -e "s/DOWNLOAD_WHEN_FOUND=(/DOWNLOAD_WHEN_FOUND=($1 $2 /g" $script
+					link=$(echo $2 | sed -e 's/\//\\\//g')
+					perl -pi -e "s!DOWNLOAD_WHEN_FOUND=\(!DOWNLOAD_WHEN_FOUND=\($1 $2 !g" $script
 					shift
 					shift
+				else
+					break
 				fi
 			done
 			;;
