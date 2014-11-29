@@ -24,12 +24,10 @@ gudmund(){
 	echo Running...
 	pwd
 
+	# Resetting the hasbeenrun-array
 	hasbeenrun=$SHOULDNOTBERUN
 
-	# Tilføjes til arrayet inden test 
-
-
-
+	# Process every file in the current directory
 	for f in *.java
 	do
 
@@ -43,22 +41,17 @@ gudmund(){
 	done
 
 
-
 	echo "${hasbeenrun[@]}"
 
 
 	sleep 1
 
-	#gedit *.java
-
+	# Opens every file in the current directory
 	{ #Silences the folowing output START
 
 	($EDITOR *.java)
 
 	} &> /dev/null #Silence output STOP
-
-	#sh /home/daniel/.apps-and-alike/idea-IU-135.1230/bin/idea.sh *.java
-
 
 }
 
@@ -104,6 +97,7 @@ countJavaFiles(){
 }
 
 
+# Checks whether the current file prompts the download of another file
 checkDownloads(){
 
 	for filename in ${DOWNLOAD_WHEN_FOUND[@]}
@@ -124,20 +118,10 @@ checkDownloads(){
 
 }
 
+#TODO: Could probably be omitted
 checkNameArrayAndRun(){
-if [[ $1 == *Icon* ]]; then # AFLEVERINGSSPECIFIK. BØR NOK FJERNES
 
-	#echo $1 indeholder Icon
-	hasbeenrun=(${hasbeenrun[@]}  $1)
-
-
-else
-
-	#echo $1 indeholder ikke Icon
 	checkArrayAndRun $1
-
-fi
-
 
 }
 
@@ -145,163 +129,160 @@ fi
 #Takes a name of a java file and runs the file if is is not in the hasbeenrun array 
 checkArrayAndRun() {
 
-shouldrun="true"
+	shouldrun="true"
 
-for java in "${hasbeenrun[@]}" then
-do
+	for java in "${hasbeenrun[@]}" then
+	do
 
-	if check $1 $java; then
-	#echo FALSE
-	shouldrun="false"
-	fi
-	
-done
-
-
-if [[ "$shouldrun" == "true" ]]; then
-
-	isinpackage=$(grep -n "package" $1 | head -n1)
-
-	currentdir=${PWD##*/}
-
-	if [[ ${isinpackage:0:1} == "1" ]] ; then
-		cd ../
-
-		#Compiles all the java files
-		javac $currentdir/$1
+		if check $1 $java; then
+		shouldrun="false"
+		fi
 		
-		#Adds the found java to has been run
-		hasbeenrun=(${hasbeenrun[@]}  $1)
-
-		#sleep 1
+	done
 
 
-		#Removes .java from filename so it can run
-		l="$(echo $1 | sed 's/\.[^.]*$//')"
+	if [[ "$shouldrun" == "true" ]]; then
 
-		javatext="$((java -ea $currentdir.$l) 2>&1)"
+		# Checks whether the file is in a package
+		isinpackage=$(grep -n "package" $1 | head -n1)
 
-		if [[ ${javatext:7:4} == "Main" ]] ; then
-			sleep 0
+		# Gets the current directory
+		currentdir=${PWD##*/}
+
+		# If it is in a package
+		if [[ ${isinpackage:0:1} == "1" ]] ; then
+
+			# Move out 1 directory
+			cd ../
+
+			#Compiles all the java files
+			javac $currentdir/$1
+			
+			#Adds the found java to has been run
+			hasbeenrun=(${hasbeenrun[@]}  $1)
+
+			#Removes .java from filename so it can run
+			l="$(echo $1 | sed 's/\.[^.]*$//')"
+
+			# Gets the output from the java-command
+			javatext="$((java -ea $currentdir.$l) 2>&1)"
+
+			# If the output states, that there is no Main-method, 
+			if [[ ${javatext:7:4} == "Main" ]] ; then
+				# Do nothing
+				sleep 0
+			else
+				# Else print the output
+				echo $javatext
+			fi
+
+			# Go back into the directory
+			cd $currentdir
+
 		else
-			echo $javatext
+
+			#Compiles all the java files
+			javac $1
+			
+			#Adds the found java to has been run
+			hasbeenrun=(${hasbeenrun[@]}  $1)
+
+			#Removes .java from filename so it can run
+			l="$(echo $1 | sed 's/\.[^.]*$//')"
+
+			# Gets the output from the java-command
+			javatext="$((java -ea $l) 2>&1)"
+
+
+			# If the output states, that there is no Main-method, 
+			if [[ ${javatext:7:4} == "Main" ]] ; then
+				# Do nothing
+				sleep 0
+			else
+				# Else print the output
+				echo $javatext
+			fi
+
 		fi
 
-		cd $currentdir
-
-	else
-
-		#Compiles all the java files
-		javac $1
-		
-		#Adds the found java to has been run
-		hasbeenrun=(${hasbeenrun[@]}  $1)
-
-		#sleep 1
-
-
-		#Removes .java from filename so it can run
-		l="$(echo $1 | sed 's/\.[^.]*$//')"
-
-		javatext="$((java -ea $l) 2>&1)"
-
-
-		if [[ ${javatext:7:4} == "Main" ]] ; then
-			sleep 0
-		else
-			echo $javatext
-		fi
-
 	fi
-
-fi
 
 }
 
 removeSpecialCharacters() {
 
-for file in *.java 
-do
+	for file in *.java 
+	do
 
-	#removes non UTF 8 caracters
-	#echo $file
-	iconv -f utf-8 -t ascii -c $file > temp.java && mv temp.java $file
-
-done
-
-
-}
-
-#Takes a java file and the name of another java file. Runs the java file if they are NOT the same
-check() {
-
-if [ $1 != $2 ]; then
-
-	return 1
-
-else 
-
-	return 0
-
-fi
-
-
-}
-
-space(){
-
-for num in {0..3} 
-do
-
-	echo
-
-done
-
-}
-
-recursivewalkthrough(){
-
-countDirectories
-
-#echo "Heeeyy Jeg er i...:"
-#pwd      
-
-#echo $subdircount
-
-countJavaFiles
-
-if [ $subjavacount -ge 1 ] ; then 
-
-		run
-fi
-
-#if there are more than 1 subdirectory in current directory
-if [ $subdircount -ge 2 ]; then
-
-	for d in */ ; do
-		
-		cd "$d"
-		recursivewalkthrough
-		cd ..
+		#removes non UTF 8 caracters
+		iconv -f utf-8 -t ascii -c $file > temp.java && mv temp.java $file
 
 	done
 
-fi
+
+}
+
+# Checks whether 2 filenames are different
+check() {
+
+	if [ $1 != $2 ]; then
+
+		return 1
+
+	else 
+
+		return 0
+
+	fi
 
 
+}
+
+#TODO: Not used
+space(){
+
+	for num in {0..3} 
+	do
+
+		echo
+
+	done
+
+}
+
+# Walks through the directories and runs everything in them
+recursivewalkthrough(){
+
+	countDirectories
+
+	countJavaFiles
+
+	# If there is more than 1 javafile, run it
+	if [ $subjavacount -ge 1 ] ; then 
+
+			run
+	fi
+
+	#if there are more than 1 subdirectory in current directory
+	if [ $subdircount -ge 2 ]; then
+
+		for d in */ ; do
+			
+			cd "$d"
+			recursivewalkthrough
+			cd ..
+
+		done
+
+	fi
 
 }
 
 run(){
 
+	removeSpecialCharacters
 
-#echo "Har jeg fundet den rigtige mappe"
-
-#pwd
-
-removeSpecialCharacters
-
-gudmund
+	gudmund
 
 }
 
@@ -342,4 +323,3 @@ recursivewalkthrough
 
 # TODO:
 # Handle multiple .zipfiles
-# Remove *ICON* test
