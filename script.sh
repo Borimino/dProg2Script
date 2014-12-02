@@ -16,6 +16,8 @@ EDITOR="gedit"
 # Flere sæt kan sættes efter hinanden, når blot der veksles mellem keys og values, og der startes med en key
 DOWNLOAD_WHEN_FOUND=()
 
+RUN_WITH_PARAMETERS=(CopyFile2.java " Account.java AccountTest.java Book2.txt")
+
 #--------------------------------------Funktioner-----------------------------------------------
 
 gudmund(){
@@ -64,10 +66,27 @@ init_download_list(){
 		((i++))
 	done
 
-	for (( i = 0 ; i < ${#DOWNLOAD_WHEN_FOUND[@]} ; i++ )) do
-		((i++))
-		DOWNLOAD_WHEN_FOUND=()
+	for (( i = ${#DOWNLOAD_WHEN_FOUND[@]}-1 ; i >= 0 ; i-- )) do
+		unset DOWNLOAD_WHEN_FOUND[i]
+		((i--))
 	done
+}
+
+# Puts all parameter-pairs in "HashMap"
+init_parameter_list(){
+	hinit parameters
+
+	for (( i = 0 ; i < ${#RUN_WITH_PARAMETERS[@]} ; i++ )) do
+		hput parameters ${RUN_WITH_PARAMETERS[i]} "${RUN_WITH_PARAMETERS[i+1]}"
+		((i++))
+	done
+
+	for (( i = ${#RUN_WITH_PARAMETERS[@]}-1 ; i > 0 ; i-- )) do
+		unset RUN_WITH_PARAMETERS[i]
+		((i--))
+	done
+
+	#echo ${RUN_WITH_PARAMETERS[@]}
 }
 
 #HashMap-hack BEGIN
@@ -80,7 +99,7 @@ hput() {
 }
 
 hget() {
-    grep "^$2 " /tmp/hashmap.$1 | awk '{ print $2 };'
+    grep "^$2 " /tmp/hashmap.$1 | awk '{$1 = ""; print $0 };'
 }
 #HashMap-hack END
 
@@ -100,22 +119,47 @@ countJavaFiles(){
 # Checks whether the current file prompts the download of another file
 checkDownloads(){
 
-	for filename in ${DOWNLOAD_WHEN_FOUND[@]}
-	do
-		if check $1 $filename; then
+	if [[ ${#DOWNLOAD_WHEN_FOUND[@]} > 0 ]]
+	then
+		for filename in ${DOWNLOAD_WHEN_FOUND[@]}
+		do
+			if check $1 $filename ; then
 
-			getFileName="$(hget downloads $1 | sed 's=.*/==')"
+				getFileName="$(hget downloads $1 | sed 's=.*/==')"
 
-			echo "Getting $getFileName"
+				echo "Getting $getFileName"
 
-			wget -q $(hget downloads $1)
+				wget -q $(hget downloads $1)
 
-			echo "Processing $getFileName"
+				echo "Processing $getFileName"
 
-			checkNameArrayAndRun $getFileName
-		fi
-	done
+				checkNameArrayAndRun $getFileName
+			fi
+		done
+	fi
 
+}
+
+# Checks whether the current file should be run with parameters
+checkParameters(){
+	
+	if [[ ${#RUN_WITH_PARAMETERS[@]} > 0 ]]
+	then
+		for filename in ${RUN_WITH_PARAMETERS[@]}
+		do
+			if check $1 $filename ; then
+
+				getParameters="$(hget parameters $1)"
+
+				echo "$getParameters"
+				return
+
+			fi
+
+		done
+	fi
+
+	return
 }
 
 #TODO: Could probably be omitted
@@ -131,14 +175,17 @@ checkArrayAndRun() {
 
 	shouldrun="true"
 
-	for java in "${hasbeenrun[@]}" then
-	do
+	if [[ ${#hasbeenrun[@]} > 0 ]]
+	then
+		for java in ${hasbeenrun[@]}
+		do
 
-		if check $1 $java; then
-		shouldrun="false"
-		fi
-		
-	done
+			if check $1 $java; then
+			shouldrun="false"
+			fi
+			
+		done
+	fi
 
 
 	if [[ "$shouldrun" == "true" ]]; then
@@ -164,8 +211,12 @@ checkArrayAndRun() {
 			#Removes .java from filename so it can run
 			l="$(echo $1 | sed 's/\.[^.]*$//')"
 
+			#echo $(checkParameters $1)
+			parameters="$(checkParameters $1)"
+			#parameters=""
+
 			# Gets the output from the java-command
-			javatext="$((java -ea $currentdir.$l) 2>&1)"
+			javatext="$((java -ea $currentdir.$l $parameters) 2>&1)"
 
 			# If the output states, that there is no Main-method, 
 			if [[ ${javatext:7:4} == "Main" ]] ; then
@@ -190,8 +241,14 @@ checkArrayAndRun() {
 			#Removes .java from filename so it can run
 			l="$(echo $1 | sed 's/\.[^.]*$//')"
 
+			#echo "$(checkParameters $1)"
+			parameters="$(checkParameters $1)"
+			#parameters=""
+
+			#echo $parameters
+
 			# Gets the output from the java-command
-			javatext="$((java -ea $l) 2>&1)"
+			javatext="$((java -ea $l $parameters) 2>&1)"
 
 
 			# If the output states, that there is no Main-method, 
@@ -316,6 +373,8 @@ if [ -d __* ]; then
 fi
 
 init_download_list
+
+init_parameter_list
 
 recursivewalkthrough
 
